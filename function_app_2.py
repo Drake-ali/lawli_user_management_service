@@ -157,206 +157,204 @@
 #     #     except Exception as e:
 #     #         return {'message': 'Error changing password: {}'.format(str(e))}, 500
 
+# import azure.functions as func
+# import jwt , json
+# from werkzeug.security import generate_password_hash, check_password_hash
+# from sqlalchemy import Column, String, Integer, create_engine
+# from sqlalchemy.ext.declarative import declarative_base
+# from sqlalchemy.orm import sessionmaker
+# import uuid
+# from functools import wraps
+
+# Base = declarative_base()
+
+# class User(Base):
+#     __tablename__ = 'users'
+#     id = Column(Integer, primary_key=True)
+#     public_id = Column(String(50), unique=True, nullable=False)
+#     email = Column(String(50), unique=True, nullable=False)
+#     password = Column(String(100), nullable=False)
+#     role = Column(String(20), nullable=False)
+
+# engine = create_engine('sqlite:///:memory:', echo=True)
+# Base.metadata.create_all(engine)
+# Session = sessionmaker(bind=engine)
+
+# app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+
+# app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+# ROUTE_VAR = "user_registration_func"
+# app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+# ROUTE_VAR = "user_logout"
+# app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+# ROUTE_VAR = "token_refresh"
+# app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+# ROUTE_VAR = "token_revoke"
+# app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+# ROUTE_VAR = "user_profile"
+# app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+# ROUTE_VAR= "change_password"
 
 
-import azure.functions as func
-import jwt , json
-from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import Column, String, Integer, create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-import uuid
-from functools import wraps
+# def fetch_user_data(email):
+#     session = Session()
+#     user = session.query(User).filter_by(email=email).first()
+#     session.close()
+#     return user
 
-Base = declarative_base()
-
-class User(Base):
-    __tablename__ = 'users'
-    id = Column(Integer, primary_key=True)
-    public_id = Column(String(50), unique=True, nullable=False)
-    email = Column(String(50), unique=True, nullable=False)
-    password = Column(String(100), nullable=False)
-    role = Column(String(20), nullable=False)
-
-engine = create_engine('sqlite:///:memory:', echo=True)
-Base.metadata.create_all(engine)
-Session = sessionmaker(bind=engine)
-
-app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
-
-app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
-ROUTE_VAR = "user_registration_func"
-app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
-ROUTE_VAR = "user_logout"
-app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
-ROUTE_VAR = "token_refresh"
-app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
-ROUTE_VAR = "token_revoke"
-app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
-ROUTE_VAR = "user_profile"
-app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
-ROUTE_VAR= "change_password"
+# @app.route(route="user_registration_func", auth_level=func.AuthLevel.ANONYMOUS)
+# def user_registration_func(req: func.HttpRequest) -> func.HttpResponse:
+#     if req.method == 'POST':
+#         req_body = req.get_json()
+#         email = req_body.get('email')
+#         password = req_body.get('password')
+#         if not email or not password:
+#             return func.HttpResponse("Email and password are required", status_code=400)
+#         session = Session()
+#         if session.query(User).filter_by(email=email).first():
+#             session.close()
+#             return func.HttpResponse("Email address already exists", status_code=400)
+#         hashed_password = generate_password_hash(password)
+#         new_user = User(public_id=str(uuid.uuid4()), email=email, password=hashed_password, role="individual")
+#         session.add(new_user)
+#         session.commit()
+#         session.close()
+#         return func.HttpResponse("Account created", status_code=201)
+#     else:
+#         return func.HttpResponse("Method not allowed", status_code=405)
 
 
-def fetch_user_data(email):
-    session = Session()
-    user = session.query(User).filter_by(email=email).first()
-    session.close()
-    return user
-
-@app.route(route="user_registration_func", auth_level=func.AuthLevel.ANONYMOUS)
-def user_registration_func(req: func.HttpRequest) -> func.HttpResponse:
-    if req.method == 'POST':
-        req_body = req.get_json()
-        email = req_body.get('email')
-        password = req_body.get('password')
-        if not email or not password:
-            return func.HttpResponse("Email and password are required", status_code=400)
-        session = Session()
-        if session.query(User).filter_by(email=email).first():
-            session.close()
-            return func.HttpResponse("Email address already exists", status_code=400)
-        hashed_password = generate_password_hash(password)
-        new_user = User(public_id=str(uuid.uuid4()), email=email, password=hashed_password, role="individual")
-        session.add(new_user)
-        session.commit()
-        session.close()
-        return func.HttpResponse("Account created", status_code=201)
-    else:
-        return func.HttpResponse("Method not allowed", status_code=405)
-
-
-def route(route, auth_level):
-    def decorator(func):
-        def wrapper(req: func.HttpRequest):
-            if req.route_params and 'route' in req.route_params and req.route_params['route'] == route:
-                if auth_level == func.AuthLevel.ANONYMOUS or req.params.get('auth_level') == auth_level:
-                    return func(req)
-                else:
-                    return func.HttpResponse("Unauthorized", status_code=401)
-            else:
-                return func.HttpResponse("Not Found", status_code=404)
-        return wrapper
-    return decorator
-
-@app.route(route="user_login", auth_level=func.AuthLevel.ANONYMOUS)
-def user_login(req: func.HttpRequest) -> func.HttpResponse:
-    if req.method == 'POST':
-        req_body = req.get_json()
-        email = req_body.get('email')
-        password = req_body.get('password')
-        if not email or not password:
-            return func.HttpResponse("Email and password are required", status_code=400)
-        user = fetch_user_data(email)
-        if user and check_password_hash(user.password, password):
-            token = jwt.encode({'public_id': user.public_id}, "YOUR_SECRET_KEY", algorithm='HS256')
-            return func.HttpResponse(token, status_code=200)
-        else:
-            return func.HttpResponse("Invalid email or password", status_code=401)
-    else:
-        return func.HttpResponse("Method not allowed", status_code=405)
-
-
-def token_required(f):
-    @wraps(f)
-    def decorated_function(req: func.HttpRequest):
-        token = req.headers.get('Authorization')
-        if not token:
-            return func.HttpResponse("Token is missing", status_code=401)
-        try:
-            token_type, token_value = token.split()
-            if token_type.lower() != 'bearer':
-                raise ValueError('Invalid token type')
-            data = jwt.decode(token_value, "YOUR_SECRET_KEY", algorithms=['HS256'])
-            # Assuming you have the logic to retrieve user data from the token
-            current_user = fetch_user_data(data['public_id'])
-        except jwt.ExpiredSignatureError:
-            return func.HttpResponse("Token has expired", status_code=401)
-        except jwt.InvalidTokenError:
-            return func.HttpResponse("Token is invalid", status_code=401)
-        except (ValueError, KeyError):
-            return func.HttpResponse("Invalid token format", status_code=401)
-        return f(req, current_user)  # Assuming you pass current_user here
-    return decorated_function
-
-@app.route(route=ROUTE_VAR, methods=['POST'], auth_level=func.AuthLevel.ANONYMOUS)
-def user_logout(req: func.HttpRequest, current_user) -> func.HttpResponse:
-    if req.method == 'POST':
-        # Implement logout functionality here
-        return func.HttpResponse("Successfully logged out", status_code=200)
-    else:
-        return func.HttpResponse("Method not allowed", status_code=405)
-
-@app.route(route=ROUTE_VAR, methods=['POST'], auth_level=func.AuthLevel.ANONYMOUS)
-def token_refresh(req: func.HttpRequest) -> func.HttpResponse:
-    if req.method == 'POST':
-        # Implement token refresh functionality here
-        return func.HttpResponse("Token refresh endpoint", status_code=200)
-    else:
-        return func.HttpResponse("Method not allowed", status_code=405)
-
-
-@app.route(route=ROUTE_VAR, methods=['POST'], auth_level=func.AuthLevel.ANONYMOUS)
-def token_revoke(req: func.HttpRequest) -> func.HttpResponse:
-    # Check if Authorization header is present
-    token_revoked = False
-    if 'Authorization' not in req.headers:
-        return func.HttpResponse("Authorization header is missing", status_code=401)
-    
-    # Extract the token from Authorization header
-    auth_header = req.headers['Authorization']
-    token_type, token_value = auth_header.split(' ')
-    
-    # Check if the token type is Bearer
-    if token_type.lower() != 'bearer':
-        return func.HttpResponse("Invalid token type", status_code=401)
-    
-    # Decode the token
-    try:
-        decoded_token = jwt.decode(token_value, "YOUR_SECRET_KEY", algorithms=['HS256'])
-        # Assuming you have some logic to revoke the token in your system/database
-        # Example: token_revoked = revoke_token(decoded_token['token_id'])
-        # Check if the token is successfully revoked
-        if token_revoked:
-            return func.HttpResponse("Token revoked successfully", status_code=200)
-        else:
-            return func.HttpResponse("Failed to revoke token", status_code=500)
-    except jwt.ExpiredSignatureError:
-        return func.HttpResponse("Token has expired", status_code=401)
-    except jwt.InvalidTokenError:
-        return func.HttpResponse("Invalid token", status_code=401)
-    except Exception as e:
-        return func.HttpResponse(f"Error: {str(e)}", status_code=500)
-
-
-@app.route(route=ROUTE_VAR, methods=['GET'], auth_level=func.AuthLevel.ANONYMOUS)
-def user_profile(req: func.HttpRequest) -> func.HttpResponse:
-    # Retrieve user ID from query parameters
-    mock_users = {}
-    user_id = req.params.get('user_id')
-
-    if not user_id:
-        return func.HttpResponse("User ID is required", status_code=400)
-
-    # Assuming user data is retrieved from a database based on the user ID
-    user_data = mock_users.get(user_id)
-
-    if not user_data:
-        return func.HttpResponse("User not found", status_code=404)
-
-    # Return user data as JSON response
-    return func.HttpResponse(json.dumps(user_data), status_code=200, mimetype="application/json")
-
-@app.route(route=ROUTE_VAR, methods=['POST'], auth_level=func.AuthLevel.ANONYMOUS)
-def change_password(req: func.HttpRequest) -> func.HttpResponse:
-    return func.HttpResponse("Change password endpoint", status_code=200)
-
+# def route(route, auth_level):
+#     def decorator(func):
+#         def wrapper(req: func.HttpRequest):
+#             if req.route_params and 'route' in req.route_params and req.route_params['route'] == route:
+#                 if auth_level == func.AuthLevel.ANONYMOUS or req.params.get('auth_level') == auth_level:
+#                     return func(req)
+#                 else:
+#                     return func.HttpResponse("Unauthorized", status_code=401)
+#             else:
+#                 return func.HttpResponse("Not Found", status_code=404)
+#         return wrapper
+#     return decorator
 
 # @app.route(route="user_login", auth_level=func.AuthLevel.ANONYMOUS)
 # def user_login(req: func.HttpRequest) -> func.HttpResponse:
-#     logging.info('Python HTTP trigger function processed a request.')
+#     if req.method == 'POST':
+#         req_body = req.get_json()
+#         email = req_body.get('email')
+#         password = req_body.get('password')
+#         if not email or not password:
+#             return func.HttpResponse("Email and password are required", status_code=400)
+#         user = fetch_user_data(email)
+#         if user and check_password_hash(user.password, password):
+#             token = jwt.encode({'public_id': user.public_id}, "YOUR_SECRET_KEY", algorithm='HS256')
+#             return func.HttpResponse(token, status_code=200)
+#         else:
+#             return func.HttpResponse("Invalid email or password", status_code=401)
+#     else:
+#         return func.HttpResponse("Method not allowed", status_code=405)
 
-#     name = req.params.get('name')
+
+# def token_required(f):
+#     @wraps(f)
+#     def decorated_function(req: func.HttpRequest):
+#         token = req.headers.get('Authorization')
+#         if not token:
+#             return func.HttpResponse("Token is missing", status_code=401)
+#         try:
+#             token_type, token_value = token.split()
+#             if token_type.lower() != 'bearer':
+#                 raise ValueError('Invalid token type')
+#             data = jwt.decode(token_value, "YOUR_SECRET_KEY", algorithms=['HS256'])
+#             # Assuming you have the logic to retrieve user data from the token
+#             current_user = fetch_user_data(data['public_id'])
+#         except jwt.ExpiredSignatureError:
+#             return func.HttpResponse("Token has expired", status_code=401)
+#         except jwt.InvalidTokenError:
+#             return func.HttpResponse("Token is invalid", status_code=401)
+#         except (ValueError, KeyError):
+#             return func.HttpResponse("Invalid token format", status_code=401)
+#         return f(req, current_user)  # Assuming you pass current_user here
+#     return decorated_function
+
+# @app.route(route=ROUTE_VAR, methods=['POST'], auth_level=func.AuthLevel.ANONYMOUS)
+# def user_logout(req: func.HttpRequest, current_user) -> func.HttpResponse:
+#     if req.method == 'POST':
+#         # Implement logout functionality here
+#         return func.HttpResponse("Successfully logged out", status_code=200)
+#     else:
+#         return func.HttpResponse("Method not allowed", status_code=405)
+
+# @app.route(route=ROUTE_VAR, methods=['POST'], auth_level=func.AuthLevel.ANONYMOUS)
+# def token_refresh(req: func.HttpRequest) -> func.HttpResponse:
+#     if req.method == 'POST':
+#         # Implement token refresh functionality here
+#         return func.HttpResponse("Token refresh endpoint", status_code=200)
+#     else:
+#         return func.HttpResponse("Method not allowed", status_code=405)
+
+
+# @app.route(route=ROUTE_VAR, methods=['POST'], auth_level=func.AuthLevel.ANONYMOUS)
+# def token_revoke(req: func.HttpRequest) -> func.HttpResponse:
+#     # Check if Authorization header is present
+#     token_revoked = False
+#     if 'Authorization' not in req.headers:
+#         return func.HttpResponse("Authorization header is missing", status_code=401)
+    
+#     # Extract the token from Authorization header
+#     auth_header = req.headers['Authorization']
+#     token_type, token_value = auth_header.split(' ')
+    
+#     # Check if the token type is Bearer
+#     if token_type.lower() != 'bearer':
+#         return func.HttpResponse("Invalid token type", status_code=401)
+    
+#     # Decode the token
+#     try:
+#         decoded_token = jwt.decode(token_value, "YOUR_SECRET_KEY", algorithms=['HS256'])
+#         # Assuming you have some logic to revoke the token in your system/database
+#         # Example: token_revoked = revoke_token(decoded_token['token_id'])
+#         # Check if the token is successfully revoked
+#         if token_revoked:
+#             return func.HttpResponse("Token revoked successfully", status_code=200)
+#         else:
+#             return func.HttpResponse("Failed to revoke token", status_code=500)
+#     except jwt.ExpiredSignatureError:
+#         return func.HttpResponse("Token has expired", status_code=401)
+#     except jwt.InvalidTokenError:
+#         return func.HttpResponse("Invalid token", status_code=401)
+#     except Exception as e:
+#         return func.HttpResponse(f"Error: {str(e)}", status_code=500)
+
+
+# @app.route(route=ROUTE_VAR, methods=['GET'], auth_level=func.AuthLevel.ANONYMOUS)
+# def user_profile(req: func.HttpRequest) -> func.HttpResponse:
+#     # Retrieve user ID from query parameters
+#     mock_users = {}
+#     user_id = req.params.get('user_id')
+
+#     if not user_id:
+#         return func.HttpResponse("User ID is required", status_code=400)
+
+#     # Assuming user data is retrieved from a database based on the user ID
+#     user_data = mock_users.get(user_id)
+
+#     if not user_data:
+#         return func.HttpResponse("User not found", status_code=404)
+
+#     # Return user data as JSON response
+#     return func.HttpResponse(json.dumps(user_data), status_code=200, mimetype="application/json")
+
+# @app.route(route=ROUTE_VAR, methods=['POST'], auth_level=func.AuthLevel.ANONYMOUS)
+# def change_password(req: func.HttpRequest) -> func.HttpResponse:
+#     return func.HttpResponse("Change password endpoint", status_code=200)
+
+
+# # @app.route(route="user_login", auth_level=func.AuthLevel.ANONYMOUS)
+# # def user_login(req: func.HttpRequest) -> func.HttpResponse:
+# #     logging.info('Python HTTP trigger function processed a request.')
+
+# #     name = req.params.get('name')
 #     if not name:
 #         try:
 #             req_body = req.get_json()
@@ -532,9 +530,8 @@ def change_password(req: func.HttpRequest) -> func.HttpResponse:
 #     #         return {'message': 'Error changing password: {}'.format(str(e))}, 500
 
 
-
 import azure.functions as func
-import jwt , json
+import jwt, json
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import Column, String, Integer, create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -557,26 +554,26 @@ Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
-
-app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 ROUTE_VAR = "user_registration_func"
-app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
-ROUTE_VAR = "user_logout"
-app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
-ROUTE_VAR = "token_refresh"
-app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
-ROUTE_VAR = "token_revoke"
-app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
-ROUTE_VAR = "user_profile"
-app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
-ROUTE_VAR= "change_password"
-
 
 def fetch_user_data(email):
     session = Session()
     user = session.query(User).filter_by(email=email).first()
     session.close()
     return user
+
+def route(route, auth_level):
+    def decorator(func):
+        def wrapper(req: func.HttpRequest):
+            if req.route_params and 'route' in req.route_params and req.route_params['route'] == route:
+                if auth_level == func.AuthLevel.ANONYMOUS or req.params.get('auth_level') == auth_level:
+                    return func(req)
+                else:
+                    return func.HttpResponse("Unauthorized", status_code=401)
+            else:
+                return func.HttpResponse("Not Found", status_code=404)
+        return wrapper
+    return decorator
 
 @app.route(route="user_registration_func", auth_level=func.AuthLevel.ANONYMOUS)
 def user_registration_func(req: func.HttpRequest) -> func.HttpResponse:
@@ -599,19 +596,6 @@ def user_registration_func(req: func.HttpRequest) -> func.HttpResponse:
     else:
         return func.HttpResponse("Method not allowed", status_code=405)
 
-
-def route(route, auth_level):
-    def decorator(func):
-        def wrapper(req: func.HttpRequest):
-            if req.route_params and 'route' in req.route_params and req.route_params['route'] == route:
-                if auth_level == func.AuthLevel.ANONYMOUS or req.params.get('auth_level') == auth_level:
-                    return func(req)
-                else:
-                    return func.HttpResponse("Unauthorized", status_code=401)
-            else:
-                return func.HttpResponse("Not Found", status_code=404)
-        return wrapper
-    return decorator
 
 @app.route(route="user_login", auth_level=func.AuthLevel.ANONYMOUS)
 def user_login(req: func.HttpRequest) -> func.HttpResponse:
